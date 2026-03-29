@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maqueen Control</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #eee; margin: 0; padding: 15px; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 270px; margin: 0 auto; }
+        button { width: 80px; height: 80px; font-size: 20px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; touch-action: manipulation; }
+        #connect { width: 100%; background: #28a745; color: white; height: 45px; border: none; font-weight: bold; }
+        input[type="color"] { width: 100%; height: 50px; border: none; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <button id="connect">micro:bitに接続</button>
+
+    <div class="card">
+        <strong>NeoPixel Color Selection</strong>
+        <input type="color" id="colorPicker" value="#ff00ff">
+        <hr>
+        <label><input type="checkbox" id="headlight" checked> Headlight (P8/P12)</label>
+    </div>
+
+    <div class="grid">
+        <div></div><button onmousedown="send('F')" onmouseup="send('S')" ontouchstart="event.preventDefault();send('F')" ontouchend="send('S')">UP</button><div></div>
+        <button onmousedown="send('L')" onmouseup="send('S')" ontouchstart="event.preventDefault();send('L')" ontouchend="send('S')">LEFT</button>
+        <button onclick="send('S')">STOP</button>
+        <button onmousedown="send('R')" onmouseup="send('S')" ontouchstart="event.preventDefault();send('R')" ontouchend="send('S')">RIGHT</button>
+        <div></div><button onmousedown="send('B')" onmouseup="send('S')" ontouchstart="event.preventDefault();send('B')" ontouchend="send('S')">DOWN</button><div></div>
+    </div>
+    <a href="https://makecode.microbit.org/S92694-07143-31157-08393">マイクロビットのプログラミングはこちら</a>
+    <script>
+        let tx;
+        document.getElementById('connect').onclick = async () => {
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'BBC micro:bit' }],
+                optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"]
+            });
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+            tx = await service.getCharacteristic("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
+            alert("Connected!");
+        };
+
+        async function send(m) {
+            if (!tx) return;
+            await tx.writeValue(new TextEncoder().encode(m + "\n"));
+        }
+
+        document.getElementById('colorPicker').oninput = (e) => {
+            const h = e.target.value;
+            const r = parseInt(h.substr(1,2),16), g = parseInt(h.substr(3,2),16), b = parseInt(h.substr(5,2),16);
+            send(`C:${r},${g},${b}`);
+        };
+
+        document.getElementById('headlight').onchange = (e) => {
+            send(e.target.checked ? "L1" : "L0");
+        };
+    </script>
+</body>
+</html>
